@@ -1,11 +1,10 @@
 import streamlit as st
 import tempfile
-import os  
 from streamlit_chat import message
 from langchain.schema import HumanMessage, AIMessage
 from draft1_graphrag import GraphRAG  # Import the main class from draft1_graphrag
 
-# Page configuration - this should be the first Streamlit command
+# Page configuration
 st.set_page_config(page_title="Pedagogy Q&A Assistant", page_icon="📚")
 
 # Custom CSS Styling to Match Pedagogy Publishers' Brand
@@ -69,7 +68,7 @@ st.markdown(
 
 # Function to check login
 def check_login(username, password):
-    return username == os.getenv("USERNAME") and password == os.getenv("PASSWORD")
+    return username == st.secrets["USERNAME"] and password == st.secrets["PASSWORD"]
 
 # Login page function
 def login_page():
