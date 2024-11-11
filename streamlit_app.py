@@ -4,7 +4,7 @@ from streamlit_chat import message
 from langchain.schema import HumanMessage, AIMessage
 from draft1_graphrag import GraphRAG  # Import the main class from draft1_graphrag
 import fitz  # PyMuPDF library
-
+from langchain.schema import Document  # Import Document class for wrapping text content
 # Page configuration
 st.set_page_config(page_title="Pedagogy Knowledge Assistant", page_icon="📘")
 
@@ -122,6 +122,9 @@ def load_pdf(file_path):
     return text
 
 # Main function for the app
+from langchain.schema import Document  # Import Document class for wrapping text content
+
+# Main function for the app
 def main():
     # Login management
     if not st.session_state['logged_in']:
@@ -148,8 +151,15 @@ def main():
             # Load text from the PDFs
             portfolio_text = load_pdf(portfolio_path)
             project_text = load_pdf(project_path)
-            combined_documents = [portfolio_text, project_text]
-            st.session_state['documents'] = combined_documents  # Store the text in session
+
+            # Wrap each text in LangChain's Document format
+            combined_documents = [
+                Document(page_content=portfolio_text),
+                Document(page_content=project_text)
+            ]
+
+            # Store the documents in session state
+            st.session_state['documents'] = combined_documents
             st.session_state['ready'] = True
             st.success("Both portfolio and project PDFs have been processed and are ready for queries.")
 
