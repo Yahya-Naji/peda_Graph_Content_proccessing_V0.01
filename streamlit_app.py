@@ -6,10 +6,85 @@ from draft1_graphrag import GraphRAG  # Import the main class from draft1_graphr
 import fitz  # PyMuPDF library
 
 # Page configuration
-st.set_page_config(page_title="Pedagogy Q&A Assistant", page_icon="📚")
+st.set_page_config(page_title="Pedagogy Knowledge Assistant", page_icon="📘")
 
-# Custom CSS Styling to Match Pedagogy Publishers' Brand
-# (CSS styling code remains the same)
+# Custom CSS Styling for an Elegant Look
+st.markdown(
+    """
+    <style>
+        /* Main title styling */
+        .main-title {
+            font-family: 'Georgia', serif;
+            color: #4E2A84; /* Dark purple for a classic feel */
+            font-size: 2.8rem;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        /* Subtitle styling */
+        .subtitle {
+            font-family: 'Georgia', serif;
+            color: #7A3E93; /* Muted purple for elegance */
+            font-size: 1.2rem;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        /* Container styling for sections */
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background-color: #f9f7fc; /* Soft background for readability */
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+        /* Styling for response bubbles */
+        .response-container {
+            background-color: #e0d7f8; /* Light purple background */
+            padding: 10px;
+            border-radius: 12px;
+            margin-top: 10px;
+            color: #333333;
+            font-family: 'Georgia', serif;
+        }
+        .user-message {
+            color: #4E2A84;
+            font-weight: bold;
+            font-family: 'Georgia', serif;
+        }
+        .assistant-message {
+            color: #333333;
+        }
+        /* Button styling */
+        .stButton>button {
+            background-color: #4E2A84;
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+            border-radius: 8px;
+            padding: 0.6rem 1.2rem;
+            border: none;
+            transition: background-color 0.3s ease;
+        }
+        .stButton>button:hover {
+            background-color: #7A3E93; /* Slight hover effect */
+        }
+        /* Text input styling */
+        .stTextInput>div>div>input {
+            border: 2px solid #7A3E93;
+            padding: 0.5rem;
+            border-radius: 8px;
+        }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
+# Title and Introduction
+st.markdown("<div class='main-title'>Pedagogy Knowledge Assistant</div>", unsafe_allow_html=True)
+st.markdown("<div class='subtitle'>Your personal assistant for educational resources and insights. Upload your documents and start asking questions!</div>", unsafe_allow_html=True)
 
 # Function to check login
 def check_login(username, password):
@@ -53,16 +128,14 @@ def main():
         login_page()
         return
 
-    # Title and introduction
-    st.markdown("<div class='title'>Chat with PDF using local RagGraph</div>", unsafe_allow_html=True)
-    st.markdown("<div class='subtitle'>Upload a portfolio and a project PDF to start asking questions</div>", unsafe_allow_html=True)
-
     # File uploader for the PDFs
+    st.markdown("<div class='container'>", unsafe_allow_html=True)
     portfolio_file = st.file_uploader("Upload your Portfolio PDF here:", type="pdf")
     project_file = st.file_uploader("Upload your Project PDF here:", type="pdf")
+    st.markdown("</div>", unsafe_allow_html=True)
 
     if portfolio_file and project_file:
-        with st.spinner("Processing..."):
+        with st.spinner("Processing your documents..."):
             # Save the uploaded files to temporary locations
             with tempfile.NamedTemporaryFile(delete=False) as tmp_portfolio:
                 tmp_portfolio.write(portfolio_file.read())
@@ -92,7 +165,7 @@ def main():
         if 'generated' not in st.session_state:
             st.session_state['generated'] = ["Welcome! You can now ask any questions regarding the uploaded documents."]
         if 'past' not in st.session_state:
-            st.session_state['past'] = ["Hey!"]
+            st.session_state['past'] = ["Hello! How can I assist you with your documents today?"]
 
         # Chat container
         response_container = st.container()
