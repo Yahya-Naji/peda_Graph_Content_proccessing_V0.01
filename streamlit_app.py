@@ -159,4 +159,39 @@ def main():
                 # Combine context with the query
                 context = """
                 You are a Q&A assistant for the Pedagogy portal. When the user mentions "project," "uploaded project," or "PDF,"
-                assume they are most likely referring to the content of the most recently uploaded document
+                assume they are most likely referring to the content of the most recently uploaded document unless they specify otherwise.
+                Provide information from the uploaded documents first, focusing on their specific content, and clarify if needed.
+                """
+                full_query = f"{context}\n{query}"
+
+                # Process the query with the stored GraphRAG instance
+                output_raw = st.session_state['graph_rag'].query(full_query)
+                
+                # Extract the content from the output to avoid metadata
+                final_answer = output_raw.content if isinstance(output_raw, AIMessage) else output_raw
+                
+                # Add the AI response to the chat history
+                st.session_state['chat_history'].append(AIMessage(content=final_answer))
+
+                # Append query and output for display
+                st.session_state.past.append(query)
+                st.session_state.generated.append(final_answer)
+
+        # Display chat history
+        if st.session_state['generated']:
+            with response_container:
+                for i, chat_message in enumerate(st.session_state['chat_history']):
+                    if isinstance(chat_message, HumanMessage):
+                        st.markdown(f"<div class='user-message'>**You:** {chat_message.content}</div>", unsafe_allow_html=True)
+                    elif isinstance(chat_message, AIMessage):
+                        st.markdown(
+                            f"""
+                            <div class="response-container">
+                                <p class="assistant-message">{chat_message.content}</p>
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
+
+if __name__ == "__main__":
+    main()
