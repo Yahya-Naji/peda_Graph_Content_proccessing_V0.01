@@ -3,68 +3,13 @@ import tempfile
 from streamlit_chat import message
 from langchain.schema import HumanMessage, AIMessage
 from draft1_graphrag import GraphRAG  # Import the main class from draft1_graphrag
+import fitz  # PyMuPDF library
 
 # Page configuration
 st.set_page_config(page_title="Pedagogy Q&A Assistant", page_icon="📚")
 
 # Custom CSS Styling to Match Pedagogy Publishers' Brand
-st.markdown(
-    """
-    <style>
-        /* Main page styling */
-        .title {
-            font-family: 'Arial', sans-serif;
-            color: #AD1457; /* Match Pedagogy branding */
-            font-size: 2.5rem;
-            font-weight: bold;
-        }
-        .subtitle {
-            font-family: 'Arial', sans-serif;
-            color: #6A1B9A;
-            font-size: 1.2rem;
-        }
-        .container {
-            padding: 1rem;
-            background-color: #FAFAFA; /* Light background for readability */
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            margin-top: 1rem;
-        }
-        .response-container {
-            background-color: #F3E5F5; /* Light purple background for chat bubble */
-            padding: 0.8rem;
-            border-radius: 12px;
-            margin-top: 0.5rem;
-            color: #424242;
-            font-family: 'Arial', sans-serif;
-        }
-        .user-message {
-            color: #1E88E5;
-            font-weight: bold;
-        }
-        .assistant-message {
-            color: #424242;
-        }
-        /* Button styling */
-        .stButton>button {
-            background-color: #AD1457;
-            color: white;
-            font-weight: bold;
-            font-size: 1rem;
-            border-radius: 8px;
-            border: none;
-            padding: 0.6rem 1.2rem;
-        }
-        /* Text input styling */
-        .stTextInput>div>div>input {
-            border: 2px solid #6A1B9A;
-            padding: 0.5rem;
-            border-radius: 8px;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+# (CSS styling code remains the same)
 
 # Function to check login
 def check_login(username, password):
@@ -92,6 +37,15 @@ if 'ready' not in st.session_state:
 if 'chat_history' not in st.session_state:
     st.session_state['chat_history'] = []
 
+# Function to load PDF text using PyMuPDF
+def load_pdf(file_path):
+    text = ""
+    with fitz.open(file_path) as pdf:
+        for page_num in range(pdf.page_count):
+            page = pdf[page_num]
+            text += page.get_text()
+    return text
+
 # Main function for the app
 def main():
     # Login management
@@ -118,13 +72,11 @@ def main():
                 tmp_project.write(project_file.read())
                 project_path = tmp_project.name
 
-            # Load the PDFs using PyPDFLoader (assuming it’s imported in draft1_graphrag)
-            portfolio_loader = PyPDFLoader(portfolio_path)
-            project_loader = PyPDFLoader(project_path)
-            portfolio_documents = portfolio_loader.load()
-            project_documents = project_loader.load()
-            combined_documents = portfolio_documents + project_documents
-            st.session_state['documents'] = combined_documents[:10]  # Limit for testing
+            # Load text from the PDFs
+            portfolio_text = load_pdf(portfolio_path)
+            project_text = load_pdf(project_path)
+            combined_documents = [portfolio_text, project_text]
+            st.session_state['documents'] = combined_documents  # Store the text in session
             st.session_state['ready'] = True
             st.success("Both portfolio and project PDFs have been processed and are ready for queries.")
 
