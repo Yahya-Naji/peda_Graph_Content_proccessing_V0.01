@@ -179,20 +179,35 @@ def main():
         response_container = st.container()
         container = st.container()
 
+        # Message type selection: New Query or Reply
+        message_type = st.selectbox("Message Type", ["New Query", "Reply"])
+        
         # Text input for queries
         with container:
             with st.form(key='my_form', clear_on_submit=True):
-                query = st.text_input("Enter your query:", key='input')
+                query = st.text_input("Enter your query or reply:", key='input')
                 submit_button = st.form_submit_button(label='Send')
+
             if submit_button and query:
+                # Add the human message to the chat history
                 st.session_state['chat_history'].append(HumanMessage(content=query))
-                context = f"You are a Q&A assistant for the {st.session_state['organization']} portal."
+
+                # Set up context based on message type
+                if message_type == "Reply" and st.session_state['chat_history']:
+                    context = f"You are replying to: {st.session_state['chat_history'][-1].content}"
+                else:
+                    context = f"You are a Q&A assistant for the {st.session_state['organization']} portal."
+                
                 full_query = f"{context}\n{query}"
 
+                # Process the query with the stored GraphRAG instance
                 output_raw = st.session_state['graph_rag'].query(full_query)
                 final_answer = output_raw.content if isinstance(output_raw, AIMessage) else output_raw
 
+                # Add the AI response to the chat history
                 st.session_state['chat_history'].append(AIMessage(content=final_answer))
+
+                # Append query and output for display
                 st.session_state.past.append(query)
                 st.session_state.generated.append(final_answer)
 
