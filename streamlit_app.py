@@ -2,9 +2,9 @@ import streamlit as st
 import tempfile
 from streamlit_chat import message
 from langchain.schema import HumanMessage, AIMessage
-from draft1_graphrag import GraphRAG
+from draft1_graphrag import GraphRAG  # Import the main class from draft1_graphrag
 import fitz  # PyMuPDF library
-from langchain.schema import Document
+from langchain.schema import Document  # Import Document class for wrapping text content
 
 # Page configuration
 st.set_page_config(page_title="Knowledge Assistant", page_icon="📘")
@@ -13,41 +13,82 @@ st.set_page_config(page_title="Knowledge Assistant", page_icon="📘")
 st.markdown(
     """
     <style>
-        /* Add custom CSS styling here */
+        /* Main title styling */
+        .main-title {
+            font-family: 'Georgia', serif;
+            color: #4E2A84; /* Dark purple for a classic feel */
+            font-size: 2.8rem;
+            font-weight: bold;
+            text-align: center;
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        /* Subtitle styling */
+        .subtitle {
+            font-family: 'Georgia', serif;
+            color: #7A3E93; /* Muted purple for elegance */
+            font-size: 1.2rem;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        /* Container styling for sections */
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background-color: #f9f7fc; /* Soft background for readability */
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+        }
+        /* Styling for response bubbles */
+        .response-container {
+            background-color: #e0d7f8; /* Light purple background */
+            padding: 10px;
+            border-radius: 12px;
+            margin-top: 10px;
+            color: #333333;
+            font-family: 'Georgia', serif;
+        }
+        .user-message {
+            color: #4E2A84;
+            font-weight: bold;
+            font-family: 'Georgia', serif;
+        }
+        .assistant-message {
+            color: #333333;
+        }
+        /* Button styling */
+        .stButton>button {
+            background-color: #4E2A84;
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+            border-radius: 8px;
+            padding: 0.6rem 1.2rem;
+            border: none;
+            transition: background-color 0.3s ease;
+        }
+        .stButton>button:hover {
+            background-color: #7A3E93; /* Slight hover effect */
+        }
+        /* Text input styling */
+        .stTextInput>div>div>input {
+            border: 2px solid #7A3E93;
+            padding: 0.5rem;
+            border-radius: 8px;
+        }
     </style>
     """,
     unsafe_allow_html=True
 )
 
-# Dropdown selection for organization
-organization = st.selectbox("Select Organization", ["Pedagogy", "Al Fayhaa"])
-
-# Display organization-specific title and introduction
-if organization == "Pedagogy":
-    st.markdown("<div class='main-title'>Pedagogy Knowledge Assistant</div>", unsafe_allow_html=True)
-    st.markdown("<div class='subtitle'>Your personal assistant for educational resources and insights. Upload your documents and start asking questions!</div>", unsafe_allow_html=True)
-elif organization == "Al Fayhaa":
-    st.markdown("<div class='main-title'>Al Fayhaa Knowledge Assistant</div>", unsafe_allow_html=True)
-    st.markdown(
-        "<div class='subtitle'>Al-Fayhaa Association: Empowering Communities Through Education and Advocacy. Upload documents and explore our initiatives.</div>", 
-        unsafe_allow_html=True
-    )
-    st.markdown(
-        """
-        **About Al Fayhaa Association**  
-        Al-Fayhaa Association is a non-profit organization in Lebanon, established in 1999, dedicated to building underprivileged communities through education, protection, and advocacy programs, ensuring equal and value-added services for all. With no political or sectarian orientation, the organization focuses on neutrality and inclusivity.
-
-        **Mission**  
-        Al Fayhaa strives to build competent citizens who value education by investing in curriculum development, protection programs, and child advocacy. Their goal is to maximize access to quality education and protection for children and youth across the region.
-
-        **Contact Information**  
-        - **Location**: -1 Floor, City Complex, Riad el Solh Road, Tripoli, Lebanon
-        - **Phone**: +961 6 44 66 81
-        - **Email**: info@al-fayhaa.org
-        - **Website**: [Al Fayhaa](http://www.al-fayhaa.org)
-        """,
-        unsafe_allow_html=True
-    )
+# Title and Introduction based on organization selection
+def display_title(organization):
+    title = f"{organization} Knowledge Assistant"
+    subtitle = "Your personal assistant for educational resources and insights. Upload your documents and start asking questions!"
+    st.markdown(f"<div class='main-title'>{title}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='subtitle'>{subtitle}</div>", unsafe_allow_html=True)
 
 # Function to check login
 def check_login(username, password):
@@ -75,6 +116,9 @@ if 'ready' not in st.session_state:
 if 'chat_history' not in st.session_state:
     st.session_state['chat_history'] = []
 
+if 'organization' not in st.session_state:
+    st.session_state['organization'] = "Pedagogy"
+
 # Function to load PDF text using PyMuPDF
 def load_pdf(file_path):
     text = ""
@@ -91,7 +135,11 @@ def main():
         login_page()
         return
 
-    # File uploader for multiple project folders (PDFs)
+    # Dropdown selection for organization
+    st.session_state['organization'] = st.selectbox("Select Organization", ["Pedagogy", "Al Fayhaa"])
+    display_title(st.session_state['organization'])
+
+    # File uploader for multiple PDFs
     st.markdown("<div class='container'>", unsafe_allow_html=True)
     uploaded_files = st.file_uploader("Upload your Project PDFs here:", type="pdf", accept_multiple_files=True)
     st.markdown("</div>", unsafe_allow_html=True)
@@ -131,33 +179,34 @@ def main():
         response_container = st.container()
         container = st.container()
 
+        # Text input for queries
         with container:
             with st.form(key='my_form', clear_on_submit=True):
                 query = st.text_input("Enter your query:", key='input')
                 submit_button = st.form_submit_button(label='Send')
             if submit_button and query:
                 st.session_state['chat_history'].append(HumanMessage(content=query))
-                context = f"""
-                You are a Q&A assistant for the {organization} portal. When the user mentions "project," "uploaded project," or "PDF,"
-                assume they are most likely referring to the content of the most recently uploaded document unless specified.
-                Provide information from the uploaded documents first.
-                """
+                context = f"You are a Q&A assistant for the {st.session_state['organization']} portal."
                 full_query = f"{context}\n{query}"
 
                 output_raw = st.session_state['graph_rag'].query(full_query)
                 final_answer = output_raw.content if isinstance(output_raw, AIMessage) else output_raw
-                
+
                 st.session_state['chat_history'].append(AIMessage(content=final_answer))
                 st.session_state.past.append(query)
                 st.session_state.generated.append(final_answer)
 
+        # Display chat history
         if st.session_state['generated']:
             with response_container:
                 for i, chat_message in enumerate(st.session_state['chat_history']):
                     if isinstance(chat_message, HumanMessage):
                         st.markdown(f"<div class='user-message'>**You:** {chat_message.content}</div>", unsafe_allow_html=True)
                     elif isinstance(chat_message, AIMessage):
-                        st.markdown(f"<div class='response-container'><p class='assistant-message'>{chat_message.content}</p></div>", unsafe_allow_html=True)
+                        st.markdown(
+                            f"<div class='response-container'><p class='assistant-message'>{chat_message.content}</p></div>",
+                            unsafe_allow_html=True
+                        )
 
 if __name__ == "__main__":
     main()
