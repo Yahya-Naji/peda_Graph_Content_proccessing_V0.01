@@ -177,8 +177,9 @@ def main():
             st.session_state['past'] = ["Hello! How can I assist you with your documents today?"]
 
         response_container = st.container()
+        container = st.container()
 
-        # Display chat history with reply option directly under each AI response
+        # Display chat history with reply option under each AI response
         if st.session_state['generated']:
             with response_container:
                 for i, chat_message in enumerate(st.session_state['chat_history']):
@@ -189,30 +190,36 @@ def main():
                             f"<div class='response-container'><p class='assistant-message'>{chat_message.content}</p></div>",
                             unsafe_allow_html=True
                         )
-
-                        # Message type and reply box directly under each AI response
+                        
+                        # Add Message Type and reply box under each AI response
+                        st.markdown("**Message Type**")
                         message_type = st.selectbox("Choose response type:", ["New Query", "Reply"], key=f"message_type_{i}")
-                        reply_text = st.text_input("Enter your query or reply:", key=f"reply_input_{i}")
-                        if st.button("Send", key=f"send_button_{i}"):
-                            # Determine if the reply is a new query or a follow-up
+                        
+                        # Text input for a reply directly under the AI response
+                        reply_text = st.text_input("Enter your reply here:", key=f"reply_input_{i}")
+                        
+                        # Submit button for reply
+                        if st.button("Send Reply", key=f"send_reply_{i}"):
+                            # Handle reply or new query based on message type selection
                             if message_type == "Reply":
                                 context = f"You are replying to: {chat_message.content}"
                             else:
                                 context = f"You are a Q&A assistant for the {st.session_state['organization']} portal."
                             
-                            # Construct the query with the selected context
+                            # Construct the full query
                             full_query = f"{context}\n{reply_text}"
                             
-                            # Process the query and get the response
+                            # Process the reply/query
                             output_raw = st.session_state['graph_rag'].query(full_query)
                             final_answer = output_raw.content if isinstance(output_raw, AIMessage) else output_raw
 
-                            # Update chat history with user's input and assistant's response
+                            # Add the human reply and AI response to chat history
                             st.session_state['chat_history'].append(HumanMessage(content=reply_text))
                             st.session_state['chat_history'].append(AIMessage(content=final_answer))
                             
-                            # Display the new response immediately
-                            st.experimental_rerun()  # Refresh the interface to display the updated chat history
+                            # Display the new reply and response in the chat history
+                            st.session_state.past.append(reply_text)
+                            st.session_state.generated.append(final_answer)
 
 if __name__ == "__main__":
     main()
