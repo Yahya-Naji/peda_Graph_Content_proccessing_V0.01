@@ -9,79 +9,156 @@ from langchain.schema import Document  # Import Document class for wrapping text
 # Page configuration
 st.set_page_config(page_title="Knowledge Assistant", page_icon="📘")
 
-# Custom CSS Styling for an Elegant Look
-st.markdown(
-    """
-    <style>
-        /* Main title styling */
-        .main-title {
-            font-family: 'Georgia', serif;
-            color: #4E2A84; /* Dark purple for a classic feel */
-            font-size: 2.8rem;
-            font-weight: bold;
-            text-align: center;
-            margin-top: 20px;
-            margin-bottom: 10px;
-        }
-        /* Subtitle styling */
-        .subtitle {
-            font-family: 'Georgia', serif;
-            color: #7A3E93; /* Muted purple for elegance */
-            font-size: 1.2rem;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-        /* Container styling for sections */
-        .container {
-            max-width: 800px;
-            margin: auto;
-            background-color: #f9f7fc; /* Soft background for readability */
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
-            margin-top: 20px;
-        }
-        /* Styling for response bubbles */
-        .response-container {
-            background-color: #e0d7f8; /* Light purple background */
-            padding: 10px;
-            border-radius: 12px;
-            margin-top: 10px;
-            color: #333333;
-            font-family: 'Georgia', serif;
-        }
-        .user-message {
-            color: #4E2A84;
-            font-weight: bold;
-            font-family: 'Georgia', serif;
-        }
-        .assistant-message {
-            color: #333333;
-        }
-        /* Button styling */
-        .stButton>button {
-            background-color: #4E2A84;
-            color: white;
-            font-weight: bold;
-            font-size: 1rem;
-            border-radius: 8px;
-            padding: 0.6rem 1.2rem;
-            border: none;
-            transition: background-color 0.3s ease;
-        }
-        .stButton>button:hover {
-            background-color: #7A3E93; /* Slight hover effect */
-        }
-        /* Text input styling */
-        .stTextInput>div>div>input {
-            border: 2px solid #7A3E93;
-            padding: 0.5rem;
-            border-radius: 8px;
-        }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+# Dark mode toggle in the sidebar
+dark_mode = st.sidebar.checkbox("Enable Dark Mode")
+
+# Dynamic CSS Styling
+if dark_mode:
+    st.markdown(
+        """
+        <style>
+            body {
+                background-color: #2E2E2E;  /* Dark background */
+                color: #FFFFFF;  /* Light text */
+            }
+            .main-title {
+                font-family: 'Georgia', serif;
+                color: #FFFFFF; /* Light title */
+                font-size: 2.8rem;
+                font-weight: bold;
+                text-align: center;
+                margin-top: 20px;
+                margin-bottom: 10px;
+            }
+            .subtitle {
+                font-family: 'Georgia', serif;
+                color: #B0B0B0; /* Light subtitle */
+                font-size: 1.2rem;
+                text-align: center;
+                margin-bottom: 30px;
+            }
+            .container {
+                max-width: 800px;
+                margin: auto;
+                background-color: #3C3C3C; /* Dark container */
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.3);
+                margin-top: 20px;
+                color: #FFFFFF; /* Light text */
+            }
+            .response-container {
+                background-color: #525252; /* Dark response background */
+                padding: 10px;
+                border-radius: 12px;
+                margin-top: 10px;
+                color: #FFFFFF; /* Light text */
+                font-family: 'Georgia', serif;
+            }
+            .user-message {
+                color: #7A93FF;
+                font-weight: bold;
+                font-family: 'Georgia', serif;
+            }
+            .assistant-message {
+                color: #FFFFFF;
+            }
+            .stButton>button {
+                background-color: #4E2A84;
+                color: white;
+                font-weight: bold;
+                font-size: 1rem;
+                border-radius: 8px;
+                padding: 0.6rem 1.2rem;
+                border: none;
+                transition: background-color 0.3s ease;
+            }
+            .stButton>button:hover {
+                background-color: #7A3E93;
+            }
+            .stTextInput>div>div>input {
+                border: 2px solid #7A3E93;
+                padding: 0.5rem;
+                border-radius: 8px;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+else:
+    st.markdown(
+        """
+        <style>
+            body {
+                background-color: #FFFFFF;  /* Light background */
+                color: #000000;  /* Dark text */
+            }
+            .main-title {
+                font-family: 'Georgia', serif;
+                color: #4E2A84; /* Dark purple title */
+                font-size: 2.8rem;
+                font-weight: bold;
+                text-align: center;
+                margin-top: 20px;
+                margin-bottom: 10px;
+            }
+            .subtitle {
+                font-family: 'Georgia', serif;
+                color: #7A3E93; /* Muted purple subtitle */
+                font-size: 1.2rem;
+                text-align: center;
+                margin-bottom: 30px;
+            }
+            .container {
+                max-width: 800px;
+                margin: auto;
+                background-color: #F9F7FC; /* Light container */
+                padding: 20px;
+                border-radius: 10px;
+                box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+                margin-top: 20px;
+                color: #000000; /* Dark text */
+            }
+            .response-container {
+                background-color: #E0D7F8; /* Light response background */
+                padding: 10px;
+                border-radius: 12px;
+                margin-top: 10px;
+                color: #333333; /* Dark text */
+                font-family: 'Georgia', serif;
+            }
+            .user-message {
+                color: #4E2A84;
+                font-weight: bold;
+                font-family: 'Georgia', serif;
+            }
+            .assistant-message {
+                color: #333333;
+            }
+            .stButton>button {
+                background-color: #4E2A84;
+                color: white;
+                font-weight: bold;
+                font-size: 1rem;
+                border-radius: 8px;
+                padding: 0.6rem 1.2rem;
+                border: none;
+                transition: background-color 0.3s ease;
+            }
+            .stButton>button:hover {
+                background-color: #7A3E93;
+            }
+            .stTextInput>div>div>input {
+                border: 2px solid #7A3E93;
+                padding: 0.5rem;
+                border-radius: 8px;
+            }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+# The rest of your app remains the same...
 
 # Title and Introduction based on organization selection
 def display_title(organization):
