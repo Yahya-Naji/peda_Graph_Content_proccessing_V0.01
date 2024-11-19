@@ -20,7 +20,6 @@ from typing import List, Tuple, Dict
 from nltk.stem import WordNetLemmatizer
 from langchain_core.pydantic_v1 import BaseModel, Field
 import nltk
-nltk.download('omw-1.4')
 import spacy
 import heapq
 from langchain_openai import OpenAIEmbeddings
