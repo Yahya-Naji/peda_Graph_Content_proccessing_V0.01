@@ -9,37 +9,41 @@ from langchain.schema import Document  # Import Document class for wrapping text
 # Page configuration
 st.set_page_config(page_title="Knowledge Assistant", page_icon="📘")
 
-# Custom CSS Styling for an Enhanced Look
+# CSS for styling
 st.markdown(
     """
     <style>
+        /* Main title styling */
         .main-title {
             font-family: 'Georgia', serif;
-            color: #4E2A84;
+            color: #4E2A84; /* Dark purple for a classic feel */
             font-size: 2.8rem;
             font-weight: bold;
             text-align: center;
             margin-top: 20px;
             margin-bottom: 10px;
         }
+        /* Subtitle styling */
         .subtitle {
             font-family: 'Georgia', serif;
-            color: #7A3E93;
+            color: #7A3E93; /* Muted purple for elegance */
             font-size: 1.2rem;
             text-align: center;
             margin-bottom: 30px;
         }
+        /* Container styling for sections */
         .container {
             max-width: 800px;
             margin: auto;
-            background-color: #f9f7fc;
+            background-color: #f9f7fc; /* Soft background for readability */
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
             margin-top: 20px;
         }
+        /* Styling for response bubbles */
         .response-container {
-            background-color: #e8f5e9;
+            background-color: #e0d7f8; /* Light purple background */
             padding: 10px;
             border-radius: 12px;
             margin-top: 10px;
@@ -52,114 +56,101 @@ st.markdown(
             font-family: 'Georgia', serif;
         }
         .assistant-message {
-            color: #2e7d32;
-            font-family: 'Georgia', serif;
+            color: #333333;
+        }
+        /* Button styling */
+        .stButton>button {
+            background-color: #4E2A84;
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+            border-radius: 8px;
+            padding: 0.6rem 1.2rem;
+            border: none;
+            transition: background-color 0.3s ease;
+        }
+        .stButton>button:hover {
+            background-color: #7A3E93; /* Slight hover effect */
+        }
+        /* Text input styling */
+        .stTextInput>div>div>input {
+            border: 2px solid #7A3E93;
+            padding: 0.5rem;
+            border-radius: 8px;
         }
     </style>
     """,
-    unsafe_allow_html=True,
+    unsafe_allow_html=True
 )
 
-# Helper functions
+# Display title and subtitle
 def display_title(organization):
     title = f"{organization} Knowledge Assistant"
     subtitle = "Your personal assistant for educational resources and insights. Upload your documents and start asking questions!"
     st.markdown(f"<div class='main-title'>{title}</div>", unsafe_allow_html=True)
     st.markdown(f"<div class='subtitle'>{subtitle}</div>", unsafe_allow_html=True)
 
+# Login verification
 def check_login(username, password):
     return username == st.secrets["USERNAME"] and password == st.secrets["PASSWORD"]
 
-def login_page():
-    st.title("Welcome to Knowledge Q&A Portal 📘")
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    if st.button("Login"):
-        if check_login(username, password):
-            st.session_state['logged_in'] = True
-            st.success("Login successful")
-        else:
-            st.error("Invalid username or password")
-
+# Load PDF text
 def load_pdf(file_path):
     text = ""
     with fitz.open(file_path) as pdf:
         for page_num in range(pdf.page_count):
-            page = pdf[page_num]
-            text += page.get_text()
+            text += pdf[page_num].get_text()
     return text
 
 # Initialize session state
-if 'logged_in' not in st.session_state:
-    st.session_state['logged_in'] = False
+for key in ["logged_in", "ready", "chat_history", "documents", "graph_rag", "organization"]:
+    if key not in st.session_state:
+        st.session_state[key] = False if key in ["logged_in", "ready"] else []
 
-if 'ready' not in st.session_state:
-    st.session_state['ready'] = False
-
-if 'chat_history' not in st.session_state:
-    st.session_state['chat_history'] = []
-
-if 'documents' not in st.session_state:
-    st.session_state['documents'] = []
-
-if 'graph_rag' not in st.session_state:
-    st.session_state['graph_rag'] = None
-
-# Main app logic
+# Main app
 def main():
-    # Login
     if not st.session_state['logged_in']:
-        login_page()
+        st.title("Welcome to Knowledge Q&A Portal 📘")
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        if st.button("Login"):
+            if check_login(username, password):
+                st.session_state['logged_in'] = True
+                st.success("Login successful")
+            else:
+                st.error("Invalid username or password")
         return
 
-    # Dropdown for organization selection
     st.session_state['organization'] = st.selectbox("Select Organization", ["Pedagogy", "Al Fayhaa"])
     display_title(st.session_state['organization'])
 
-    # File uploader for multiple PDFs
-    st.markdown("<div class='container'>", unsafe_allow_html=True)
     uploaded_files = st.file_uploader("Upload your Project PDFs here:", type="pdf", accept_multiple_files=True)
-    st.markdown("</div>", unsafe_allow_html=True)
-
     if uploaded_files and st.button("Process Documents"):
         with st.spinner("Processing your documents..."):
             combined_documents = []
-            for uploaded_file in uploaded_files:
+            for file in uploaded_files:
                 with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
-                    tmp_file.write(uploaded_file.read())
+                    tmp_file.write(file.read())
                     file_path = tmp_file.name
-                file_text = load_pdf(file_path)
-                combined_documents.append(Document(page_content=file_text))
-
+                combined_documents.append(Document(page_content=load_pdf(file_path)))
             st.session_state['documents'] = combined_documents
             st.session_state['graph_rag'] = GraphRAG()
             st.session_state['graph_rag'].process_documents(combined_documents)
             st.session_state['ready'] = True
-            st.success("Documents processed successfully! You can now ask questions.")
+            st.success("Documents processed successfully!")
 
-    st.divider()
-
-    # Chat interface
     if st.session_state['ready']:
-        # Display chat history
-        for i, (user_message, bot_message) in enumerate(st.session_state['chat_history']):
-            message(user_message, is_user=True, key=f"user_{i}", avatar_style="thumbs")
-            message(bot_message, key=f"bot_{i}", avatar_style="bottts")
+        for i, (user_msg, bot_msg) in enumerate(st.session_state['chat_history']):
+            message(user_msg, is_user=True, key=f"user_{i}")
+            message(bot_msg, key=f"bot_{i}")
 
-        # Chat input form
-        with st.form(key="query_form", clear_on_submit=True):
-            user_query = st.text_input("Your question:", key="input")
-            submit_button = st.form_submit_button(label="Send")
-
-        if submit_button and user_query:
-            # Append user query to chat history
-            st.session_state['chat_history'].append((f"**You:** {user_query}", None))
-            with st.spinner("Generating response..."):
+        with st.form(key="query_form"):
+            user_query = st.text_input("Ask your question:")
+            if st.form_submit_button("Send"):
                 response = st.session_state['graph_rag'].query(user_query)
-
-                # Append assistant response to chat history
-                st.session_state['chat_history'][-1] = (f"**You:** {user_query}", f"**Assistant:** {response}")
+                st.session_state['chat_history'].append((user_query, response))
+                message(user_query, is_user=True)
+                message(response)
 
 if __name__ == "__main__":
     main()
-
