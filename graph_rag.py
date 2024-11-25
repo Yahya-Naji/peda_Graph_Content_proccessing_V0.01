@@ -7,9 +7,6 @@ from langchain.retrievers.document_compressors import LLMChainExtractor
 from langchain_community.callbacks import get_openai_callback
 from langchain_community.document_loaders import PyPDFLoader
 from sklearn.metrics.pairwise import cosine_similarity
-from langchain_core.messages import HumanMessage, AIMessage
-from typing import List
-
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import os
@@ -20,6 +17,7 @@ from typing import List, Tuple, Dict
 from nltk.stem import WordNetLemmatizer
 from langchain_core.pydantic_v1 import BaseModel, Field
 import nltk
+nltk.download('omw-1.4')
 import spacy
 import heapq
 from langchain_openai import OpenAIEmbeddings
@@ -761,137 +759,65 @@ class GraphRAG:
         
         return response
     
-import os
-import tempfile
-import streamlit as st
-from dotenv import load_dotenv
-from langchain_core.messages import HumanMessage, AIMessage
-from streamlit_chat import message
-from langchain_community.document_loaders import PyPDFLoader
-from typing import List, Dict
 
 
-st.set_page_config(page_title="Pedagogy Q&A Assistant", page_icon="📚")
 
-# Styling for the app
-st.markdown(
-    """
-    <style>
-        .title { font-family: 'Arial', sans-serif; color: #6A1B9A; }
-        .subtitle { font-family: 'Arial', sans-serif; color: #AD1457; }
-        .container { padding: 1rem; background-color: #F3E5F5; border-radius: 10px; margin-top: 1rem; }
-        .response { font-family: 'Arial', sans-serif; color: #424242; }
-        .query { font-family: 'Arial', sans-serif; color: #1E88E5; font-weight: bold; }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
 
-# Function to check login
-def check_login(username, password):
-    return username == os.getenv("USERNAME") and password == os.getenv("PASSWORD")
 
-def login_page():
-    st.title("Welcome to Pedagogy Q&A Portal 📘")
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    if st.button("Login"):
-        if check_login(username, password):
-            st.session_state['logged_in'] = True
-            st.success("Login successful")
-        else:
-            st.error("Invalid username or password")
-
-# Initialize session state for documents and chat history
-if 'documents' not in st.session_state:
-    st.session_state['documents'] = {}
-    st.session_state['graph'] = None
-    st.session_state['chat_history'] = []
-    st.session_state['logged_in'] = False
-
-# Function to load documents
-def load_documents(uploaded_file):
-    with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
-        tmp_file.write(uploaded_file.read())
-        return tmp_file.name
-
-# Function to create a combined graph for portfolio and project documents
-def create_combined_graph(document_paths):
-    combined_graph = GraphRAG()  # Instantiate GraphRAG
-    for doc_path in document_paths:
-        # Load the PDF document using PyPDFLoader
-        loader = PyPDFLoader(doc_path)
-        documents = loader.load()
-        combined_graph.process_documents(documents)
-    return combined_graph
-
-# Function to handle response processing
-def process_response(response):
-    if isinstance(response, dict):
-        return response.get('content', 'No relevant information found.')
-    elif isinstance(response, str):
-        return response
-    else:
-        return 'No relevant information found.'
-
-# Main function
 def main():
-    # Login management
-    if not st.session_state['logged_in']:
-        login_page()
-        return
+    # Streamlit setup
+    st.title("Chat with PDF using local RagGraph 🕸️🦜")
 
-    # Title and introduction
-    st.title("Proposal Writing Assistant 📄")
-    st.subheader("Upload a portfolio and project document for the assistant to provide integrated insights.")
+    # Load PDF and process documents
+    if 'ready' not in st.session_state:
+        st.session_state['ready'] = False
 
-    # Step 1: Upload Portfolio Document
-    portfolio_file = st.file_uploader("Upload Portfolio PDF:", type="pdf", key="portfolio")
-    # Step 2: Upload Project Document
-    project_file = st.file_uploader("Upload Project PDF:", type="pdf", key="project")
+    uploaded_file = st.file_uploader("Upload your PDF here 👇:", type="pdf")
 
-    # Process and combine files into a single graph
-    if portfolio_file and project_file and not st.session_state['graph']:
-        # Load documents
-        portfolio_path = load_documents(portfolio_file)
-        project_path = load_documents(project_file)
-        st.session_state['documents'] = {'portfolio': portfolio_path, 'project': project_path}
+    if uploaded_file is not None:
+        with st.spinner("Processing..."):
+            # Save the uploaded file to a temporary location
+            with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
+                tmp_file.write(uploaded_file.read())
+                tmp_file_path = tmp_file.name
+            
+            # Load the PDF using PyPDFLoader
+            loader = PyPDFLoader(tmp_file_path)
+            documents = loader.load()
+            documents = documents[:10]
+            st.session_state['ready'] = True
 
-        # Create combined graph
-        st.session_state['graph'] = create_combined_graph([portfolio_path, project_path])
-        st.success("Combined graph created with portfolio and project documents!")
+    st.divider()
 
-    # Query Interface
-    if st.session_state['graph']:
-        st.divider()
-        st.subheader("Ask Questions Based on the Combined Portfolio and Project Details")
-        query = st.text_input("Enter your query:")
+    if st.session_state['ready']:
+        if 'generated' not in st.session_state:
+            st.session_state['generated'] = ["Welcome! You can now ask any questions regarding " + uploaded_file.name]
 
-        if query:
-            # Add user's query to the chat history
-            st.session_state.chat_history.append(HumanMessage(content=query))
+        if 'past' not in st.session_state:
+            st.session_state['past'] = ["Hey!"]
 
-            # Generate response from the combined graph
-            graph_rag = st.session_state['graph']
-            response_raw = graph_rag.query(query)
-            response_text = process_response(response_raw)
+        # Container for chat history
+        response_container = st.container()
 
-            # Add response to the chat history
-            st.session_state.chat_history.append(AIMessage(content=response_text))
+        # Container for text box
+        container = st.container()
 
-        # Display chat history
-        for i, chat_message in enumerate(st.session_state.chat_history):
-            if isinstance(chat_message, HumanMessage):
-                st.markdown(f"**You:** {chat_message.content}", unsafe_allow_html=True)
-            else:
-                st.markdown(
-                    f"""
-                    <div class="container">
-                        <p class="response">{chat_message.content}</p>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+        with container:
+            with st.form(key='my_form', clear_on_submit=True):
+                query = st.text_input("Enter your query:", key='input')
+                submit_button = st.form_submit_button(label='Send')
+            if submit_button and query:
+                graph_rag = GraphRAG()
+                graph_rag.process_documents(documents)
+                output = graph_rag.query(query)
+                st.session_state.past.append(query)
+                st.session_state.generated.append(output)
+
+            if st.session_state['generated']:
+                with response_container:
+                    for i in range(len(st.session_state['generated'])):
+                        message(st.session_state["past"][i], is_user=True, key=str(i) + '_user', avatar_style="thumbs")
+                        message(st.session_state["generated"][i], key=str(i), avatar_style="fun-emoji")
 
 if __name__ == "__main__":
     main()
