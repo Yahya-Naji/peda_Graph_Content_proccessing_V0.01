@@ -129,9 +129,9 @@ def main():
     uploaded_files = st.file_uploader("Upload your Project PDFs here:", type="pdf", accept_multiple_files=True)
     if uploaded_files and st.button("Process Documents"):
         with st.spinner("Processing your documents..."):
-            combined_text = ""  # Initialize an empty string to store combined text
+            documents = []  # Initialize a list to store individual documents
 
-            # Extract text from each PDF and combine them
+            # Extract text from each PDF and create separate Document objects
             for file in uploaded_files:
                 with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
                     tmp_file.write(file.read())
@@ -139,18 +139,14 @@ def main():
                 
                 # Extract text from the PDF
                 file_text = load_pdf(file_path)
-                combined_text += file_text + "\n"  # Append the text with a newline separator
+                documents.append(Document(page_content=file_text))
 
-            # Create a single Document object from the combined text
-            combined_document = Document(page_content=combined_text)
-
-            # Store the combined document in session state
-            st.session_state['documents'] = [combined_document]
-
-            # Initialize and process GraphRAG
-            if 'graph_rag' not in st.session_state:
+            # Ensure GraphRAG is initialized only once
+            if 'graph_rag' not in st.session_state or not isinstance(st.session_state['graph_rag'], GraphRAG):
                 st.session_state['graph_rag'] = GraphRAG()
-            st.session_state['graph_rag'].process_documents([combined_document])  # Pass the combined document
+
+            # Process the list of Document objects
+            st.session_state['graph_rag'].process_documents(documents)
             st.session_state['ready'] = True
             st.success("Documents processed successfully! You can now ask questions.")
 
@@ -184,6 +180,7 @@ def main():
                 # Display chat messages
                 message(f"**You:** {user_query}", is_user=True)
                 message(f"**Assistant:** {response_str}")
+
 
 if __name__ == "__main__":
     main()
