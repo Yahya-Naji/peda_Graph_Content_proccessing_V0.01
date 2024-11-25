@@ -141,27 +141,25 @@ def main():
 
     # Chat interface
     if st.session_state['ready']:
-        if 'generated' not in st.session_state:
-            st.session_state['generated'] = ["Welcome! You can now ask any questions regarding the uploaded documents."]
-        if 'past' not in st.session_state:
-            st.session_state['past'] = ["Hello! How can I assist you?"]
-
         # Display chat history
-        for i, (user_msg, bot_msg) in enumerate(zip(st.session_state['past'], st.session_state['generated'])):
-            message(user_msg, is_user=True, key=f"user_{i}", avatar_style="thumbs")
-            message(bot_msg, key=f"bot_{i}", avatar_style="bottts")
+        for i, (user_message, bot_message) in enumerate(st.session_state['chat_history']):
+            message(user_message, is_user=True, key=f"user_{i}", avatar_style="thumbs")
+            message(bot_message, key=f"bot_{i}", avatar_style="bottts")
 
-        # Chat input box
+        # Chat input form
         with st.form(key="query_form", clear_on_submit=True):
-            user_input = st.text_input("Your question:", key="input")
+            user_query = st.text_input("Your question:", key="input")
             submit_button = st.form_submit_button(label="Send")
 
-        # Handle user query
-        if submit_button and user_input:
+        if submit_button and user_query:
+            # Append user query to chat history
+            st.session_state['chat_history'].append((f"**You:** {user_query}", None))
             with st.spinner("Generating response..."):
-                response = st.session_state['graph_rag'].query(user_input)
-                st.session_state['past'].append(user_input)
-                st.session_state['generated'].append(response)
+                response = st.session_state['graph_rag'].query(user_query)
+
+                # Append assistant response to chat history
+                st.session_state['chat_history'][-1] = (f"**You:** {user_query}", f"**Assistant:** {response}")
 
 if __name__ == "__main__":
     main()
+
