@@ -141,13 +141,23 @@ def main():
             
             # Store processed documents in session state
             st.session_state['documents'] = combined_documents
-            st.session_state['graph_rag'] = GraphRAG()
+
+            # Initialize and process GraphRAG
+            if 'graph_rag' not in st.session_state:
+                st.session_state['graph_rag'] = GraphRAG()
             st.session_state['graph_rag'].process_documents(combined_documents)
             st.session_state['ready'] = True
-            st.success("Documents processed successfully!")
+            st.success("Documents processed successfully! You can now ask questions.")
+
+    # Divider for UI separation
+    st.divider()
 
     # Chat interface
     if st.session_state['ready']:
+        # Initialize chat history
+        if 'chat_history' not in st.session_state:
+            st.session_state['chat_history'] = []
+
         # Display previous chat messages
         for i, (user_msg, bot_msg) in enumerate(st.session_state['chat_history']):
             message(user_msg, is_user=True, key=f"user_{i}")
@@ -160,19 +170,16 @@ def main():
                 # Query the GraphRAG and get a response
                 response = st.session_state['graph_rag'].query(user_query)
 
-                # Convert response to string
+                # Convert response to string to ensure compatibility with the chat UI
                 response_str = str(response)
 
-                # Debugging output
-                st.write(f"DEBUG: Response Type: {type(response)}")
-                st.write(f"DEBUG: Response Content: {response_str}")
-
-                # Append to chat history
-                st.session_state['chat_history'].append((user_query, response_str))
+                # Append user query and response to chat history
+                st.session_state['chat_history'].append((f"**You:** {user_query}", f"**Assistant:** {response_str}"))
 
                 # Display chat messages
-                message(user_query, is_user=True)
-                message(response_str)
+                message(f"**You:** {user_query}", is_user=True)
+                message(f"**Assistant:** {response_str}")
+
 
 
 if __name__ == "__main__":
