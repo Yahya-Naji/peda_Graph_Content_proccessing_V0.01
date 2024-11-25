@@ -107,8 +107,8 @@ for key in ["logged_in", "ready", "chat_history", "documents", "graph_rag", "org
     if key not in st.session_state:
         st.session_state[key] = False if key in ["logged_in", "ready"] else []
 
-# Main app
 def main():
+    # Login logic
     if not st.session_state['logged_in']:
         st.title("Welcome to Knowledge Q&A Portal 📘")
         username = st.text_input("Username")
@@ -121,9 +121,11 @@ def main():
                 st.error("Invalid username or password")
         return
 
+    # Organization selection
     st.session_state['organization'] = st.selectbox("Select Organization", ["Pedagogy", "Al Fayhaa"])
     display_title(st.session_state['organization'])
 
+    # File uploader for PDFs
     uploaded_files = st.file_uploader("Upload your Project PDFs here:", type="pdf", accept_multiple_files=True)
     if uploaded_files and st.button("Process Documents"):
         with st.spinner("Processing your documents..."):
@@ -132,25 +134,46 @@ def main():
                 with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
                     tmp_file.write(file.read())
                     file_path = tmp_file.name
-                combined_documents.append(Document(page_content=load_pdf(file_path)))
+                
+                # Extract text from the PDF
+                file_text = load_pdf(file_path)
+                combined_documents.append(Document(page_content=file_text))
+            
+            # Store processed documents in session state
             st.session_state['documents'] = combined_documents
             st.session_state['graph_rag'] = GraphRAG()
             st.session_state['graph_rag'].process_documents(combined_documents)
             st.session_state['ready'] = True
             st.success("Documents processed successfully!")
 
+    # Chat interface
     if st.session_state['ready']:
+        # Display previous chat messages
         for i, (user_msg, bot_msg) in enumerate(st.session_state['chat_history']):
             message(user_msg, is_user=True, key=f"user_{i}")
             message(bot_msg, key=f"bot_{i}")
 
+        # Form for user to input questions
         with st.form(key="query_form"):
             user_query = st.text_input("Ask your question:")
             if st.form_submit_button("Send"):
+                # Query the GraphRAG and get a response
                 response = st.session_state['graph_rag'].query(user_query)
-                st.session_state['chat_history'].append((user_query, response))
+
+                # Convert response to string
+                response_str = str(response)
+
+                # Debugging output
+                st.write(f"DEBUG: Response Type: {type(response)}")
+                st.write(f"DEBUG: Response Content: {response_str}")
+
+                # Append to chat history
+                st.session_state['chat_history'].append((user_query, response_str))
+
+                # Display chat messages
                 message(user_query, is_user=True)
-                message(response)
+                message(response_str)
+
 
 if __name__ == "__main__":
     main()
