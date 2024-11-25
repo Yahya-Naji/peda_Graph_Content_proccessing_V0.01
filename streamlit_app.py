@@ -141,40 +141,27 @@ def main():
 
     # Chat interface
     if st.session_state['ready']:
-        # Chat input form
-        with st.container():
-            with st.form(key="query_form", clear_on_submit=True):
-                user_query = st.text_input("Enter your query:")
-                submit_button = st.form_submit_button(label="Send")
-
-            if submit_button and user_query:
-                with st.spinner("Generating response..."):
-                    raw_response = st.session_state['graph_rag'].query(user_query)
-
-                    # Extract meaningful content from the response
-                    if isinstance(raw_response, AIMessage):
-                        response = raw_response.content
-                    else:
-                        response = str(raw_response)
-
-                    # Append to chat history
-                    st.session_state['chat_history'].append((user_query, response))
+        if 'generated' not in st.session_state:
+            st.session_state['generated'] = ["Welcome! You can now ask any questions regarding the uploaded documents."]
+        if 'past' not in st.session_state:
+            st.session_state['past'] = ["Hello! How can I assist you?"]
 
         # Display chat history
-        for i, (user_message, bot_message) in enumerate(st.session_state['chat_history']):
-            try:
-                if user_message:
-                    st.markdown(
-                        f"<div class='response-container'><b class='user-message'>You:</b> {user_message}</div>",
-                        unsafe_allow_html=True,
-                    )
-                if bot_message:
-                    st.markdown(
-                        f"<div class='response-container'><b class='assistant-message'>Assistant:</b> {bot_message}</div>",
-                        unsafe_allow_html=True,
-                    )
-            except Exception as e:
-                st.error(f"Error displaying message {i}: {str(e)}")
+        for i, (user_msg, bot_msg) in enumerate(zip(st.session_state['past'], st.session_state['generated'])):
+            message(user_msg, is_user=True, key=f"user_{i}", avatar_style="thumbs")
+            message(bot_msg, key=f"bot_{i}", avatar_style="bottts")
+
+        # Chat input box
+        with st.form(key="query_form", clear_on_submit=True):
+            user_input = st.text_input("Your question:", key="input")
+            submit_button = st.form_submit_button(label="Send")
+
+        # Handle user query
+        if submit_button and user_input:
+            with st.spinner("Generating response..."):
+                response = st.session_state['graph_rag'].query(user_input)
+                st.session_state['past'].append(user_input)
+                st.session_state['generated'].append(response)
 
 if __name__ == "__main__":
     main()
