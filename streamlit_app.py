@@ -172,15 +172,35 @@ def main():
                 response = st.session_state['graph_rag'].query(user_query)
 
                 # Extract the readable content from the response
-                response_str = response.content if isinstance(response, AIMessage) else str(response)
+                if isinstance(response, AIMessage):
+                    response_str = response.content  # Extract meaningful content
+                else:
+                    response_str = str(response)
+
+                # Remove irrelevant metadata from the response
+                response_str_cleaned = clean_response(response_str)
 
                 # Append user query and response to chat history
-                st.session_state['chat_history'].append((f"**You:** {user_query}", f"**Assistant:** {response_str}"))
+                st.session_state['chat_history'].append((f"**You:** {user_query}", f"**Assistant:** {response_str_cleaned}"))
 
                 # Display chat messages
                 message(f"**You:** {user_query}", is_user=True)
-                message(f"**Assistant:** {response_str}")
+                message(f"**Assistant:** {response_str_cleaned}")
 
+
+def clean_response(response):
+    """
+    Cleans the response string to remove metadata, traversal details, and irrelevant content.
+    """
+    # Extract meaningful content and clean up response
+    if "content=" in response:
+        start = response.find("content='") + len("content='")
+        end = response.find("' additional_kwargs=")
+        if start != -1 and end != -1:
+            return response[start:end].strip()
+
+    # If no special markers, return the response as-is
+    return response.strip()
 
 if __name__ == "__main__":
     main()
