@@ -138,17 +138,29 @@ def main():
                 # Extract text from the PDF
                 file_text = load_pdf(file_path)
                 combined_documents.append(Document(page_content=file_text))
+
+            # Debugging: Ensure combined_documents is a list of Document objects
+            st.write("DEBUG: Combined Documents:", combined_documents)
             
-            # Store processed documents in session state
-            st.session_state['documents'] = combined_documents
-            if 'graph_rag' not in st.session_state:
-                st.session_state['graph_rag'] = GraphRAG()
-            st.session_state['graph_rag'].process_documents(combined_documents)
-            st.session_state['ready'] = True
-            st.success("Documents processed successfully!")
+            try:
+                # Initialize GraphRAG if not already initialized
+                if 'graph_rag' not in st.session_state:
+                    st.session_state['graph_rag'] = GraphRAG()
+                    st.write("DEBUG: GraphRAG initialized.")
+
+                # Process documents
+                st.session_state['graph_rag'].process_documents(combined_documents)
+                st.session_state['ready'] = True
+                st.success("Documents processed successfully!")
+            except AttributeError as e:
+                st.error(f"An error occurred while processing documents: {e}")
+                st.stop()
+
+    # Divider for UI separation
+    st.divider()
 
     # Chat interface
-    if st.session_state['ready']:
+    if st.session_state.get('ready', False):
         # Initialize chat history if not present
         if 'chat_history' not in st.session_state:
             st.session_state['chat_history'] = []
@@ -162,16 +174,23 @@ def main():
         with st.form(key="query_form"):
             user_query = st.text_input("Ask your question:")
             if st.form_submit_button("Send"):
-                # Query the GraphRAG and get a response
-                response = st.session_state['graph_rag'].query(user_query)
-                response_str = response.content if isinstance(response, AIMessage) else str(response)
+                try:
+                    # Query the GraphRAG and get a response
+                    response = st.session_state['graph_rag'].query(user_query)
+                    response_str = response.content if isinstance(response, AIMessage) else str(response)
 
-                # Append the user query and bot response to chat history
-                st.session_state['chat_history'].append((user_query, response_str))
+                    # Append the user query and bot response to chat history
+                    st.session_state['chat_history'].append((user_query, response_str))
 
-                # Display the new user message and bot response
-                message(user_query, is_user=True, key=f"user_{len(st.session_state['chat_history'])}")
-                message(response_str, key=f"bot_{len(st.session_state['chat_history'])}")
+                    # Display the new user message and bot response
+                    message(user_query, is_user=True, key=f"user_{len(st.session_state['chat_history'])}")
+                    message(response_str, key=f"bot_{len(st.session_state['chat_history'])}")
+                except Exception as e:
+                    st.error(f"An error occurred while processing your query: {e}")
+
+if __name__ == "__main__":
+    main()
+
 
 if __name__ == "__main__":
     main()
