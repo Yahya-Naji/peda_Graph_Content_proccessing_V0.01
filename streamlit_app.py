@@ -107,18 +107,9 @@ for key in ["logged_in", "ready", "chat_history", "documents", "graph_rag", "org
     if key not in st.session_state:
         st.session_state[key] = False if key in ["logged_in", "ready"] else []
 
-# Main app
 def main():
     if not st.session_state['logged_in']:
-        st.title("Welcome to Knowledge Q&A Portal 📘")
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
-        if st.button("Login"):
-            if check_login(username, password):
-                st.session_state['logged_in'] = True
-                st.success("Login successful")
-            else:
-                st.error("Invalid username or password")
+        login_page()
         return
 
     st.session_state['organization'] = st.selectbox("Select Organization", ["Pedagogy", "Al Fayhaa"])
@@ -140,17 +131,21 @@ def main():
             st.success("Documents processed successfully!")
 
     if st.session_state['ready']:
-        for i, (user_msg, bot_msg) in enumerate(st.session_state['chat_history']):
-            message(user_msg, is_user=True, key=f"user_{i}")
-            message(bot_msg, key=f"bot_{i}")
+        user_query = st.text_input("Ask your question:")
+        if st.button("Send"):
+            with st.spinner("Generating response..."):
+                try:
+                    response = st.session_state['graph_rag'].query(user_query)
+                    if response and isinstance(response, str):
+                        message(user_query, is_user=True)
+                        message(response)
+                        st.session_state['chat_history'].append((user_query, response))
+                    else:
+                        st.error("Response is empty or invalid.")
+                except Exception as e:
+                    st.error(f"Error during query: {e}")
+                    st.write(f"DEBUG: Exception details: {e}")
 
-        with st.form(key="query_form"):
-            user_query = st.text_input("Ask your question:")
-            if st.form_submit_button("Send"):
-                response = st.session_state['graph_rag'].query(user_query)
-                st.session_state['chat_history'].append((user_query, response))
-                message(user_query, is_user=True)
-                message(response)
 
 if __name__ == "__main__":
     main()
