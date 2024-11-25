@@ -719,7 +719,6 @@ class GraphRAG:
         """
         self.llm = ChatOpenAI(temperature=0, model_name="gpt-4o-mini", max_tokens=4000)
         self.embedding_model = OpenAIEmbeddings()
-        # self.embedding_model = OpenAI
         self.document_processor = DocumentProcessor()
         self.knowledge_graph = KnowledgeGraph()
         self.query_engine = None
@@ -741,7 +740,7 @@ class GraphRAG:
 
     def query(self, query: str):
         """
-        Handles a query by retrieving relevant information from the knowledge graph and visualizing the traversal path.
+        Handles a query by retrieving relevant information from the knowledge graph.
         
         Args:
         - query (str): The query to be answered.
@@ -751,13 +750,9 @@ class GraphRAG:
         """
         response, traversal_path, filtered_content = self.query_engine.query(query)
         
-        if traversal_path:
-            self.visualizer.visualize_traversal(self.knowledge_graph.graph, traversal_path)
-        else:
-            print("No traversal path to visualize.")
-        
-        return response
-    
+        # Return only the final response (string or content)
+        return response.content if isinstance(response, AIMessage) else str(response)
+
 
 
 import streamlit as st
