@@ -9,7 +9,7 @@ from langchain.schema import Document  # Import Document class for wrapping text
 # Page configuration
 st.set_page_config(page_title="Knowledge Assistant", page_icon="📘")
 
-# Custom CSS Styling
+# Custom CSS Styling for an Elegant Look
 st.markdown(
     """
     <style>
@@ -148,7 +148,15 @@ def main():
 
             if submit_button and user_query:
                 with st.spinner("Generating response..."):
-                    response = st.session_state['graph_rag'].query(user_query)
+                    raw_response = st.session_state['graph_rag'].query(user_query)
+
+                    # Ensure response is a string
+                    if isinstance(raw_response, AIMessage):
+                        response = raw_response.content
+                    else:
+                        response = str(raw_response)
+
+                    # Append to chat history
                     st.session_state['chat_history'].append((user_query, response))
 
         # Display chat history
