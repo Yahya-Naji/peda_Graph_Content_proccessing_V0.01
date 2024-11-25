@@ -139,12 +139,11 @@ def main():
                 file_text = load_pdf(file_path)
                 combined_documents.append(Document(page_content=file_text))
             
-            # Store processed documents in session state
-            st.session_state['documents'] = combined_documents
-
-            # Initialize and process GraphRAG
+            # Ensure `graph_rag` is initialized correctly
             if 'graph_rag' not in st.session_state:
-                st.session_state['graph_rag'] = GraphRAG()
+                st.session_state['graph_rag'] = GraphRAG()  # Initialize only once
+
+            # Process the documents using GraphRAG
             st.session_state['graph_rag'].process_documents(combined_documents)
             st.session_state['ready'] = True
             st.success("Documents processed successfully! You can now ask questions.")
@@ -179,8 +178,5 @@ def main():
                 # Display chat messages
                 message(f"**You:** {user_query}", is_user=True)
                 message(f"**Assistant:** {response_str}")
-
-
-
 if __name__ == "__main__":
     main()
