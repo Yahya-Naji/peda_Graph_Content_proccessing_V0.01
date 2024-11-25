@@ -129,31 +129,28 @@ def main():
     uploaded_files = st.file_uploader("Upload your Project PDFs here:", type="pdf", accept_multiple_files=True)
     if uploaded_files and st.button("Process Documents"):
         with st.spinner("Processing your documents..."):
-            documents = []  # Initialize a list to store individual documents
-
-            # Extract text from each PDF and create separate Document objects
+            combined_text = ""  # Combine all PDF texts into one string
             for file in uploaded_files:
                 with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
                     tmp_file.write(file.read())
                     file_path = tmp_file.name
                 
                 # Extract text from the PDF
-                file_text = load_pdf(file_path)
-                documents.append(Document(page_content=file_text))
-
-            # Ensure GraphRAG is initialized only once
+                combined_text += load_pdf(file_path) + "\n"  # Combine PDF content
+            
+            # Initialize GraphRAG if not already initialized
             if 'graph_rag' not in st.session_state or not isinstance(st.session_state['graph_rag'], GraphRAG):
                 st.session_state['graph_rag'] = GraphRAG()
 
-            # Process the list of Document objects
-            st.session_state['graph_rag'].process_documents(documents)
+            # Process the combined document as a single entity
+            st.session_state['graph_rag'].process_documents([Document(page_content=combined_text)])
             st.session_state['ready'] = True
-            st.success("Documents processed successfully! You can now ask questions.")
+            st.success("Documents processed successfully! You can now start a conversation.")
 
     # Divider for UI separation
     st.divider()
 
-    # Chat interface
+    # Continuous Chat Interface
     if st.session_state['ready']:
         # Initialize chat history if not present
         if 'chat_history' not in st.session_state:
@@ -164,43 +161,23 @@ def main():
             message(user_msg, is_user=True, key=f"user_{i}")
             message(bot_msg, key=f"bot_{i}")
 
-        # Form for user to input questions
-        with st.form(key="query_form"):
-            user_query = st.text_input("Ask your question:")
-            if st.form_submit_button("Send"):
-                # Query the GraphRAG and get a response
-                response = st.session_state['graph_rag'].query(user_query)
-
-                # Extract the readable content from the response
-                if isinstance(response, AIMessage):
-                    response_str = response.content  # Extract meaningful content
-                else:
-                    response_str = str(response)
-
-                # Remove irrelevant metadata from the response
-                response_str_cleaned = clean_response(response_str)
-
-                # Append user query and response to chat history
-                st.session_state['chat_history'].append((f"**You:** {user_query}", f"**Assistant:** {response_str_cleaned}"))
-
-                # Display chat messages
+        # Form for the user to input questions
+        user_query = st.text_input("Ask your question:", key="chat_input")
+        if st.button("Send", key="send_button"):
+            if user_query.strip():
+                # Display user message
+                st.session_state['chat_history'].append((f"**You:** {user_query}", None))
                 message(f"**You:** {user_query}", is_user=True)
-                message(f"**Assistant:** {response_str_cleaned}")
 
+                # Process user query and get a response
+                with st.spinner("Assistant is typing..."):
+                    response = st.session_state['graph_rag'].query(user_query)
+                    response_str = response.content if isinstance(response, AIMessage) else str(response)
 
-def clean_response(response):
-    """
-    Cleans the response string to remove metadata, traversal details, and irrelevant content.
-    """
-    # Extract meaningful content and clean up response
-    if "content=" in response:
-        start = response.find("content='") + len("content='")
-        end = response.find("' additional_kwargs=")
-        if start != -1 and end != -1:
-            return response[start:end].strip()
+                # Append assistant's response to chat history
+                st.session_state['chat_history'][-1] = (f"**You:** {user_query}", f"**Assistant:** {response_str}")
+                message(f"**Assistant:** {response_str}")
 
-    # If no special markers, return the response as-is
-    return response.strip()
 
 if __name__ == "__main__":
     main()
