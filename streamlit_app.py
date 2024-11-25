@@ -129,38 +129,29 @@ def main():
     uploaded_files = st.file_uploader("Upload your Project PDFs here:", type="pdf", accept_multiple_files=True)
     if uploaded_files and st.button("Process Documents"):
         with st.spinner("Processing your documents..."):
-            combined_documents = []
+            combined_text = ""  # Combine all PDF texts into one string
             for file in uploaded_files:
                 with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
                     tmp_file.write(file.read())
                     file_path = tmp_file.name
                 
                 # Extract text from the PDF
-                file_text = load_pdf(file_path)
-                combined_documents.append(Document(page_content=file_text))
-
-            # Debugging: Ensure combined_documents is a list of Document objects
-            st.write("DEBUG: Combined Documents:", combined_documents)
+                combined_text += load_pdf(file_path) + "\n"  # Combine PDF content
             
-            try:
-                # Initialize GraphRAG if not already initialized
-                if 'graph_rag' not in st.session_state:
-                    st.session_state['graph_rag'] = GraphRAG()
-                    st.write("DEBUG: GraphRAG initialized.")
+            # Initialize GraphRAG if not already initialized
+            if 'graph_rag' not in st.session_state or not isinstance(st.session_state['graph_rag'], GraphRAG):
+                st.session_state['graph_rag'] = GraphRAG()
 
-                # Process documents
-                st.session_state['graph_rag'].process_documents(combined_documents)
-                st.session_state['ready'] = True
-                st.success("Documents processed successfully!")
-            except AttributeError as e:
-                st.error(f"An error occurred while processing documents: {e}")
-                st.stop()
+            # Process the combined document as a single entity
+            st.session_state['graph_rag'].process_documents([Document(page_content=combined_text)])
+            st.session_state['ready'] = True
+            st.success("Documents processed successfully! You can now start a conversation.")
 
     # Divider for UI separation
     st.divider()
 
-    # Chat interface
-    if st.session_state.get('ready', False):
+    # Continuous Chat Interface
+    if st.session_state['ready']:
         # Initialize chat history if not present
         if 'chat_history' not in st.session_state:
             st.session_state['chat_history'] = []
@@ -170,26 +161,22 @@ def main():
             message(user_msg, is_user=True, key=f"user_{i}")
             message(bot_msg, key=f"bot_{i}")
 
-        # Form for user to input questions
-        with st.form(key="query_form"):
-            user_query = st.text_input("Ask your question:")
-            if st.form_submit_button("Send"):
-                try:
-                    # Query the GraphRAG and get a response
+        # Form for the user to input questions
+        user_query = st.text_input("Ask your question:", key="chat_input")
+        if st.button("Send", key="send_button"):
+            if user_query.strip():
+                # Display user message
+                st.session_state['chat_history'].append((f"**You:** {user_query}", None))
+                message(f"**You:** {user_query}", is_user=True)
+
+                # Process user query and get a response
+                with st.spinner("Assistant is typing..."):
                     response = st.session_state['graph_rag'].query(user_query)
                     response_str = response.content if isinstance(response, AIMessage) else str(response)
 
-                    # Append the user query and bot response to chat history
-                    st.session_state['chat_history'].append((user_query, response_str))
-
-                    # Display the new user message and bot response
-                    message(user_query, is_user=True, key=f"user_{len(st.session_state['chat_history'])}")
-                    message(response_str, key=f"bot_{len(st.session_state['chat_history'])}")
-                except Exception as e:
-                    st.error(f"An error occurred while processing your query: {e}")
-
-if __name__ == "__main__":
-    main()
+                # Append assistant's response to chat history
+                st.session_state['chat_history'][-1] = (f"**You:** {user_query}", f"**Assistant:** {response_str}")
+                message(f"**Assistant:** {response_str}")
 
 
 if __name__ == "__main__":
