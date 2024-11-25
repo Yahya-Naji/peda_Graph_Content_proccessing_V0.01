@@ -2,14 +2,14 @@ import streamlit as st
 import tempfile
 from streamlit_chat import message
 from langchain.schema import HumanMessage, AIMessage
-from draft1_graphrag import GraphRAG  # Import the main class from draft1_graphrag
+from draft1_graphrag import GraphRAG
 import fitz  # PyMuPDF library
 from langchain.schema import Document  # Import Document class for wrapping text content
 
 # Page configuration
 st.set_page_config(page_title="Knowledge Assistant", page_icon="📘")
 
-# Custom CSS Styling for an Elegant Look
+# Custom CSS Styling for an Enhanced Look
 st.markdown(
     """
     <style>
@@ -39,7 +39,7 @@ st.markdown(
             margin-top: 20px;
         }
         .response-container {
-            background-color: #e0d7f8;
+            background-color: #e8f5e9;
             padding: 10px;
             border-radius: 12px;
             margin-top: 10px;
@@ -52,7 +52,8 @@ st.markdown(
             font-family: 'Georgia', serif;
         }
         .assistant-message {
-            color: #333333;
+            color: #2e7d32;
+            font-family: 'Georgia', serif;
         }
     </style>
     """,
@@ -150,7 +151,7 @@ def main():
                 with st.spinner("Generating response..."):
                     raw_response = st.session_state['graph_rag'].query(user_query)
 
-                    # Ensure response is a string
+                    # Extract meaningful content from the response
                     if isinstance(raw_response, AIMessage):
                         response = raw_response.content
                     else:
@@ -163,9 +164,15 @@ def main():
         for i, (user_message, bot_message) in enumerate(st.session_state['chat_history']):
             try:
                 if user_message:
-                    message(user_message, is_user=True, key=f"user_{i}")
+                    st.markdown(
+                        f"<div class='response-container'><b class='user-message'>You:</b> {user_message}</div>",
+                        unsafe_allow_html=True,
+                    )
                 if bot_message:
-                    message(bot_message, key=f"bot_{i}")
+                    st.markdown(
+                        f"<div class='response-container'><b class='assistant-message'>Assistant:</b> {bot_message}</div>",
+                        unsafe_allow_html=True,
+                    )
             except Exception as e:
                 st.error(f"Error displaying message {i}: {str(e)}")
 
