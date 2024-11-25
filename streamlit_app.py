@@ -9,7 +9,7 @@ from langchain.schema import Document  # Import Document class for wrapping text
 # Page configuration
 st.set_page_config(page_title="Knowledge Assistant", page_icon="📘")
 
-# Custom CSS Styling for an Elegant Look
+# Custom CSS Styling
 st.markdown(
     """
     <style>
@@ -59,30 +59,16 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-# Initialize session state
-if 'logged_in' not in st.session_state:
-    st.session_state['logged_in'] = False
+# Helper functions
+def display_title(organization):
+    title = f"{organization} Knowledge Assistant"
+    subtitle = "Your personal assistant for educational resources and insights. Upload your documents and start asking questions!"
+    st.markdown(f"<div class='main-title'>{title}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='subtitle'>{subtitle}</div>", unsafe_allow_html=True)
 
-if 'ready' not in st.session_state:
-    st.session_state['ready'] = False
-
-if 'chat_history' not in st.session_state:
-    st.session_state['chat_history'] = []
-
-if 'organization' not in st.session_state:
-    st.session_state['organization'] = "Pedagogy"
-
-if 'graph_rag' not in st.session_state:
-    st.session_state['graph_rag'] = None
-
-if 'documents' not in st.session_state:
-    st.session_state['documents'] = []
-
-# Function to check login
 def check_login(username, password):
     return username == st.secrets["USERNAME"] and password == st.secrets["PASSWORD"]
 
-# Login page function
 def login_page():
     st.title("Welcome to Knowledge Q&A Portal 📘")
     username = st.text_input("Username")
@@ -94,7 +80,6 @@ def login_page():
         else:
             st.error("Invalid username or password")
 
-# Function to load PDF text using PyMuPDF
 def load_pdf(file_path):
     text = ""
     with fitz.open(file_path) as pdf:
@@ -103,24 +88,38 @@ def load_pdf(file_path):
             text += page.get_text()
     return text
 
-# Main function
+# Initialize session state
+if 'logged_in' not in st.session_state:
+    st.session_state['logged_in'] = False
+
+if 'ready' not in st.session_state:
+    st.session_state['ready'] = False
+
+if 'chat_history' not in st.session_state:
+    st.session_state['chat_history'] = []
+
+if 'documents' not in st.session_state:
+    st.session_state['documents'] = []
+
+if 'graph_rag' not in st.session_state:
+    st.session_state['graph_rag'] = None
+
+# Main app logic
 def main():
+    # Login
     if not st.session_state['logged_in']:
         login_page()
         return
 
-    # Dropdown for organization
+    # Dropdown for organization selection
     st.session_state['organization'] = st.selectbox("Select Organization", ["Pedagogy", "Al Fayhaa"])
-    st.markdown(f"<div class='main-title'>{st.session_state['organization']} Knowledge Assistant</div>", unsafe_allow_html=True)
-    st.markdown(
-        "<div class='subtitle'>Your personal assistant for educational resources and insights. Upload your documents and start asking questions!</div>",
-        unsafe_allow_html=True,
-    )
+    display_title(st.session_state['organization'])
 
-    # File uploader
+    # File uploader for multiple PDFs
+    st.markdown("<div class='container'>", unsafe_allow_html=True)
     uploaded_files = st.file_uploader("Upload your Project PDFs here:", type="pdf", accept_multiple_files=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
-    # Process documents
     if uploaded_files and st.button("Process Documents"):
         with st.spinner("Processing your documents..."):
             combined_documents = []
@@ -128,9 +127,9 @@ def main():
                 with tempfile.NamedTemporaryFile(delete=False) as tmp_file:
                     tmp_file.write(uploaded_file.read())
                     file_path = tmp_file.name
-                # Load text from each PDF
                 file_text = load_pdf(file_path)
                 combined_documents.append(Document(page_content=file_text))
+
             st.session_state['documents'] = combined_documents
             st.session_state['graph_rag'] = GraphRAG()
             st.session_state['graph_rag'].process_documents(combined_documents)
@@ -141,21 +140,26 @@ def main():
 
     # Chat interface
     if st.session_state['ready']:
+        # Chat input form
         with st.container():
             with st.form(key="query_form", clear_on_submit=True):
                 user_query = st.text_input("Enter your query:")
                 submit_button = st.form_submit_button(label="Send")
-            
+
             if submit_button and user_query:
-                # Process user query
                 with st.spinner("Generating response..."):
                     response = st.session_state['graph_rag'].query(user_query)
                     st.session_state['chat_history'].append((user_query, response))
 
         # Display chat history
         for i, (user_message, bot_message) in enumerate(st.session_state['chat_history']):
-            message(user_message, is_user=True, key=f"user_{i}")
-            message(bot_message, key=f"bot_{i}")
+            try:
+                if user_message:
+                    message(user_message, is_user=True, key=f"user_{i}")
+                if bot_message:
+                    message(bot_message, key=f"bot_{i}")
+            except Exception as e:
+                st.error(f"Error displaying message {i}: {str(e)}")
 
 if __name__ == "__main__":
     main()
